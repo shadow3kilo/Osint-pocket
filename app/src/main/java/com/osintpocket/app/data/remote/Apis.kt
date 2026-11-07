@@ -57,6 +57,30 @@ interface PwnedPasswordsApi {
     suspend fun range(@Path("prefix") prefix: String): ResponseBody
 }
 
+/** XposedOrNot (gratis, sin key): 2/s, 25/h, 100/día por IP. Uso personal y de bajo volumen. */
+interface XonApi {
+    @GET("v1/breach-analytics")
+    suspend fun breachAnalytics(@Query("email") email: String): Response<JsonObject>
+}
+
+/** XposedOrNot contraseñas: prefijo de 10 hex del Keccak-512. */
+interface XonPasswordApi {
+    @GET("api/v1/pass/anon/{prefix}")
+    suspend fun anon(@Path("prefix") prefix: String): Response<JsonObject>
+}
+
+/** LeakCheck API pública (gratis, sin key): nombres de fuentes y tipos de datos, nunca valores. */
+interface LeakCheckApi {
+    @GET("api/public")
+    suspend fun check(@Query("check") query: String): Response<JsonObject>
+}
+
+/** Hudson Rock Cavalier OSINT (gratis, sin key, ~1 req/s): equipos infectados por infostealers. */
+interface HudsonRockApi {
+    @GET("api/json/v2/osint-tools/search-by-email")
+    suspend fun byEmail(@Query("email") email: String): Response<JsonObject>
+}
+
 /** ip-api.com gratuito: solo HTTP, 45 peticiones/minuto. */
 interface IpApiService {
     @GET("json/{query}")

@@ -8,6 +8,10 @@ import com.osintpocket.app.core.network.UserAgentInterceptor
 import com.osintpocket.app.data.remote.CrtShApi
 import com.osintpocket.app.data.remote.DohApi
 import com.osintpocket.app.data.remote.HibpApi
+import com.osintpocket.app.data.remote.HudsonRockApi
+import com.osintpocket.app.data.remote.LeakCheckApi
+import com.osintpocket.app.data.remote.XonApi
+import com.osintpocket.app.data.remote.XonPasswordApi
 import com.osintpocket.app.data.remote.PwnedPasswordsApi
 import com.osintpocket.app.data.remote.InternetDbApi
 import com.osintpocket.app.data.remote.IpApiService
@@ -38,6 +42,10 @@ object NetworkModule {
         "internetdb.shodan.io" to 300L,
         "cloudflare-dns.com" to 50L,
         "haveibeenpwned.com" to 6_500L, // plan HIBP más bajo: 10 peticiones/minuto
+        "api.xposedornot.com" to 600L, // 2/s (y 25/h, 100/día por IP)
+        "passwords.xposedornot.com" to 300L,
+        "leakcheck.io" to 1_000L,
+        "cavalier.hudsonrock.com" to 1_100L, // ~1/s
     )
 
     @Provides
@@ -112,6 +120,20 @@ object NetworkModule {
     @Provides @Singleton
     fun providePwnedPasswords(c: OkHttpClient, j: Json): PwnedPasswordsApi =
         retrofit("https://api.pwnedpasswords.com/", c, j).create()
+
+    @Provides @Singleton
+    fun provideXon(c: OkHttpClient, j: Json): XonApi = retrofit("https://api.xposedornot.com/", c, j).create()
+
+    @Provides @Singleton
+    fun provideXonPasswords(c: OkHttpClient, j: Json): XonPasswordApi =
+        retrofit("https://passwords.xposedornot.com/", c, j).create()
+
+    @Provides @Singleton
+    fun provideLeakCheck(c: OkHttpClient, j: Json): LeakCheckApi = retrofit("https://leakcheck.io/", c, j).create()
+
+    @Provides @Singleton
+    fun provideHudsonRock(c: OkHttpClient, j: Json): HudsonRockApi =
+        retrofit("https://cavalier.hudsonrock.com/", c, j).create()
 
     @Provides @Singleton
     fun provideIpApi(c: OkHttpClient, j: Json): IpApiService = retrofit("http://ip-api.com/", c, j).create()

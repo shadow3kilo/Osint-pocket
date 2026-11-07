@@ -59,7 +59,6 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
-import androidx.core.text.HtmlCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -69,7 +68,8 @@ import com.osintpocket.app.core.ui.SectionState
 import com.osintpocket.app.data.history.ExportFormat
 import com.osintpocket.app.data.history.HistoryEntry
 import com.osintpocket.app.data.history.HistoryExporter
-import com.osintpocket.app.data.remote.HibpBreach
+import com.osintpocket.app.data.LeakProvider
+import com.osintpocket.app.data.ProviderResult
 import com.osintpocket.app.ui.common.ErrorRow
 import com.osintpocket.app.ui.common.InfoCard
 import com.osintpocket.app.ui.common.KeyValueList
@@ -84,7 +84,7 @@ private val RED = Color(0xFFF85149)
 // ───────────────────────── Menú "Más" ─────────────────────────
 
 enum class MoreDest(val route: String, val title: String, val subtitle: String, val icon: ImageVector) {
-    BREACH("more/breach", "Brechas", "Email en Have I Been Pwned y contraseñas filtradas", Icons.Outlined.WarningAmber),
+    BREACH("more/breach", "Brechas", "Email y contraseñas en fuentes gratuitas de filtraciones", Icons.Outlined.WarningAmber),
     HASH("more/hash", "Hash de archivo", "MD5 / SHA-1 / SHA-256 y búsqueda en VirusTotal", Icons.Outlined.Fingerprint),
     HISTORY("more/history", "Historial", "Búsquedas guardadas y exportación JSON/Markdown", Icons.Outlined.History),
     SETTINGS("more/settings", "Ajustes", "API key de HIBP e historial", Icons.Outlined.Settings),
@@ -116,21 +116,7 @@ fun BreachScreen(onOpenSettings: () -> Unit, vm: BreachViewModel = hiltViewModel
     }
 
     LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        item {
-            Text("Email en brechas (HIBP)", style = MaterialTheme.typography.titleMedium)
-        }
-        if (!state.hasKey) {
-            item {
-                InfoCard("Falta la API key") {
-                    Text(
-                        "La búsqueda por email de Have I Been Pwned requiere una API key de pago. " +
-                            "Guárdala en Ajustes; se almacena cifrada en el Keystore.",
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                    TextButton(onClick = onOpenSettings) { Text("Ir a Ajustes") }
-                }
-            }
-        }
+        item { Text("Email en filtraciones", style = MaterialTheme.typography.titleMedium) }
         item {
             QueryField(
                 value = state.email,
@@ -138,64 +124,96 @@ fun BreachScreen(onOpenSettings: () -> Unit, vm: BreachViewModel = hiltViewModel
                 label = "Email",
                 placeholder = "tu@correo.com",
                 error = state.emailError,
-                busy = state.breaches is SectionState.Loading,
+                busy = state.emailBusy,
                 onSubmit = vm::checkEmail,
                 onCancel = vm::cancel,
                 hint = "Comprueba tus propias cuentas",
                 keyboardType = KeyboardType.Email,
             )
         }
-        when (val b = state.breaches) {
-            SectionState.Idle -> Unit
-            SectionState.Loading -> item { InfoCard("Consultando", selectable = false) { LoadingRow() } }
-            is SectionState.Error -> item { InfoCard("Error") { ErrorRow(b.message) } }
-            is SectionState.Success -> {
-                if (b.data.isEmpty()) {
-                    item {
-                        InfoCard("Sin brechas conocidas") {
-                            Text("Este email no aparece en las brechas públicas que indexa HIBP.", color = GREEN)
-                        }
-                    }
-                } else {
-                    item {
-                        Text("Aparece en ${b.data.size} brechas", style = MaterialTheme.typography.titleSmall, color = RED)
-                    }
-                    items(b.data, key = { it.name }) { BreachCard(it) }
+        item {
+            Text(
+                "Se consulta a la vez en XposedOrNot, LeakCheck y Hudson Rock, que son gratis y no piden registro." +
+                    if (state.hasKey) " También en HIBP con tu API key." else "",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            if (!state.hasKey) {
+                TextButton(onClick = onOpenSettings) { Text("Añadir HIBP (opcional, de pago)") }
+            }
+        }
+
+        if (state.providers.isNotEmpty()) {
+            val done = state.providers.values.mapNotNull { (it as? SectionState.Success)?.data }
+            if (done.isNotEmpty()) {
+                item {
+                    val hits = done.count { it.found }
+                    Text(
+                        if (hits == 0) "Sin filtraciones en ${done.size} de ${state.providers.size} fuentes"
+                        else "Aparece en $hits de ${done.size} fuentes consultadas",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = if (hits == 0) GREEN else RED,
+                    )
                 }
+            }
+            LeakProvider.entries.filter { it in state.providers }.forEach { p ->
+                item(key = p.name) { ProviderCard(p, state.providers.getValue(p)) }
             }
         }
 
         item { HorizontalDivider(Modifier.padding(vertical = 8.dp)) }
-        item { PasswordCheck(state, vm::onPasswordChange, vm::checkPassword) }
+        item { PasswordCheck(state, vm::onPasswordChange, vm::setUseXonForPassword, vm::checkPassword) }
     }
 }
 
 @Composable
-private fun BreachCard(b: HibpBreach) {
-    val desc = remember(b.description) {
-        HtmlCompat.fromHtml(b.description, HtmlCompat.FROM_HTML_MODE_COMPACT).toString().trim()
+private fun ProviderCard(p: LeakProvider, state: SectionState<ProviderResult>) {
+    var expanded by rememberSaveable(p) { mutableStateOf(true) }
+    InfoCard(p.title, subtitle = p.subtitle, copyText = (state as? SectionState.Success)?.data?.let(::providerText)) {
+        when (state) {
+            SectionState.Idle -> Unit
+            SectionState.Loading -> LoadingRow()
+            is SectionState.Error -> ErrorRow(state.message)
+            is SectionState.Success -> {
+                val r = state.data
+                Text(r.summary, color = if (r.found) RED else GREEN, style = MaterialTheme.typography.bodyMedium)
+                if (r.items.isNotEmpty()) {
+                    val shown = if (expanded) r.items else emptyList()
+                    shown.forEachIndexed { i, item ->
+                        if (i > 0) HorizontalDivider()
+                        Text(item.name, style = MaterialTheme.typography.titleSmall)
+                        if (item.fields.isNotEmpty()) KeyValueList(item.fields)
+                    }
+                    if (r.items.size > 1) {
+                        TextButton(onClick = { expanded = !expanded }) {
+                            Text(if (expanded) "Ocultar detalle" else "Ver las ${r.items.size} entradas")
+                        }
+                    }
+                }
+            }
+        }
     }
-    val rows = buildList {
-        add(KeyValue("Fecha", b.breachDate))
-        if (b.domain.isNotBlank()) add(KeyValue("Dominio", b.domain))
-        add(KeyValue("Cuentas", NumberFormat.getIntegerInstance().format(b.pwnCount)))
-        add(KeyValue("Datos expuestos", b.dataClasses.joinToString(", ")))
-        val tags = listOfNotNull("no verificada".takeUnless { b.isVerified }, "sensible".takeIf { b.isSensitive }, "lista de spam".takeIf { b.isSpamList })
-        if (tags.isNotEmpty()) add(KeyValue("Notas", tags.joinToString(", ")))
-    }
-    InfoCard(b.title.ifBlank { b.name }) {
-        KeyValueList(rows)
-        if (desc.isNotEmpty()) Text(desc, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+}
+
+private fun providerText(r: ProviderResult): String = buildString {
+    append(r.provider.title).append(": ").append(r.summary)
+    r.items.forEach { item ->
+        append("\n- ").append(item.name)
+        item.fields.forEach { append(" | ${it.key}: ${it.value}") }
     }
 }
 
 @Composable
-private fun PasswordCheck(state: BreachUiState, onChange: (String) -> Unit, onCheck: () -> Unit) {
+private fun PasswordCheck(
+    state: BreachUiState,
+    onChange: (String) -> Unit,
+    onToggleXon: (Boolean) -> Unit,
+    onCheck: () -> Unit,
+) {
     var visible by remember { mutableStateOf(false) }
-    InfoCard("Contraseña filtrada", subtitle = "Pwned Passwords · gratis, sin API key", selectable = false) {
+    InfoCard("Contraseña filtrada", subtitle = "Gratis · la contraseña nunca sale del móvil", selectable = false) {
         Text(
-            "Se calcula el SHA-1 en el móvil y solo se envían sus 5 primeros caracteres (k-anonimato). " +
-                "La contraseña no se guarda ni se envía.",
+            "Se calcula un hash en el móvil y solo se envía un prefijo. La contraseña no se guarda.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -214,21 +232,38 @@ private fun PasswordCheck(state: BreachUiState, onChange: (String) -> Unit, onCh
                 }
             },
         )
-        Button(onClick = onCheck, enabled = state.password.isNotEmpty() && state.passwordResult !is SectionState.Loading) {
-            Text("Comprobar")
-        }
-        when (val r = state.passwordResult) {
-            SectionState.Idle -> Unit
-            SectionState.Loading -> LoadingRow()
-            is SectionState.Error -> ErrorRow(r.message)
-            is SectionState.Success -> if (r.data == 0) {
-                Text("No aparece en filtraciones conocidas.", color = GREEN)
-            } else {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text("Comprobar también en XposedOrNot", style = MaterialTheme.typography.bodyMedium)
                 Text(
-                    "Aparece ${NumberFormat.getIntegerInstance().format(r.data)} veces en filtraciones. No la uses.",
-                    color = RED, style = MaterialTheme.typography.titleSmall,
+                    "Envía 10 caracteres del hash en vez de 5, así que es menos anónimo que Pwned Passwords.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
+            Switch(checked = state.useXonForPassword, onCheckedChange = onToggleXon)
+        }
+        Button(onClick = onCheck, enabled = state.password.isNotEmpty() && !state.passwordBusy) {
+            Text("Comprobar")
+        }
+        PasswordResultRow("Pwned Passwords", state.pwnedResult)
+        PasswordResultRow("XposedOrNot", state.xonPasswordResult)
+    }
+}
+
+@Composable
+private fun PasswordResultRow(source: String, result: SectionState<Long>) {
+    when (result) {
+        SectionState.Idle -> Unit
+        SectionState.Loading -> LoadingRow("$source…")
+        is SectionState.Error -> ErrorRow("$source: ${result.message}")
+        is SectionState.Success -> if (result.data == 0L) {
+            Text("$source: no aparece en filtraciones conocidas.", color = GREEN)
+        } else {
+            Text(
+                "$source: aparece ${NumberFormat.getIntegerInstance().format(result.data)} veces. No la uses.",
+                color = RED, style = MaterialTheme.typography.titleSmall,
+            )
         }
     }
 }

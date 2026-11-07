@@ -42,8 +42,12 @@ Abre la carpeta del proyecto. Android Studio genera el wrapper y descarga el SDK
 | Dominio/IP: geolocalización | `ip-api.com` (solo HTTP en el plan gratuito) | No | 45 peticiones/min; la app espacia a 1,4 s |
 | Web | Petición GET directa al sitio + `/.well-known/security.txt` | No | 0,5 s por host |
 | Alias | Las URLs de `app/src/main/assets/sites.json` | No | 8 a la vez, 12 s por sitio |
-| Brechas (email) | Have I Been Pwned v3 | **Sí, de pago** | Plan básico: 10 peticiones/min; la app espacia a 6,5 s |
-| Contraseñas | Pwned Passwords (k-anonimato, `Add-Padding`) | No | Sin límite práctico |
+| Brechas (email) | XposedOrNot `breach-analytics` | No | 2/s, 25/hora, 100/día por IP; uso personal |
+| Brechas (email) | LeakCheck API pública | No | Solo nombres de fuentes y tipos de datos, nunca valores |
+| Infostealers (email) | Hudson Rock Cavalier OSINT | No | ~1/s; contraseñas enmascaradas |
+| Brechas (email, opcional) | Have I Been Pwned v3 | **Sí, de pago** | Plan básico: 10 peticiones/min; la app espacia a 6,5 s |
+| Contraseñas | Pwned Passwords (SHA-1, envía 5 hex, `Add-Padding`) | No | Sin límite práctico |
+| Contraseñas (opcional) | XposedOrNot `pass/anon` (Keccak-512 original, envía 10 hex) | No | Menos anónimo: desactivado por defecto |
 | Hash | Local (MD5/SHA-1/SHA-256) + enlace a VirusTotal | No | El archivo nunca se sube |
 
 Todas las peticiones llevan el User-Agent `OSINTPocket/<versión> (Android <v>; passive-recon)` y

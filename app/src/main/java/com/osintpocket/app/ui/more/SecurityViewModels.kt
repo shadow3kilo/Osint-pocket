@@ -9,15 +9,17 @@ import com.osintpocket.app.core.network.safeCall
 import com.osintpocket.app.core.network.toUserMessage
 import com.osintpocket.app.core.ui.SectionState
 import com.osintpocket.app.data.HashedFile
+import com.osintpocket.app.data.LeakProvider
+import com.osintpocket.app.data.ProviderResult
 import com.osintpocket.app.data.SecurityRepository
 import com.osintpocket.app.data.history.ExportFormat
 import com.osintpocket.app.data.history.HistoryEntry
 import com.osintpocket.app.data.history.HistoryModule
 import com.osintpocket.app.data.history.HistoryRepository
-import com.osintpocket.app.data.remote.HibpBreach
 import com.osintpocket.app.domain.security.EmailValidator
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -33,10 +35,16 @@ data class BreachUiState(
     val email: String = "",
     val emailError: String? = null,
     val hasKey: Boolean = false,
-    val breaches: SectionState<List<HibpBreach>> = SectionState.Idle,
+    val checkedEmail: String? = null,
+    val providers: Map<LeakProvider, SectionState<ProviderResult>> = emptyMap(),
     val password: String = "",
-    val passwordResult: SectionState<Int> = SectionState.Idle,
-)
+    val useXonForPassword: Boolean = false,
+    val pwnedResult: SectionState<Long> = SectionState.Idle,
+    val xonPasswordResult: SectionState<Long> = SectionState.Idle,
+) {
+    val emailBusy: Boolean get() = providers.values.any { it is SectionState.Loading }
+    val passwordBusy: Boolean get() = pwnedResult is SectionState.Loading || xonPasswordResult is SectionState.Loading
+}
 
 @HiltViewModel
 class BreachViewModel @Inject constructor(
@@ -53,48 +61,87 @@ class BreachViewModel @Inject constructor(
 
     fun onEmailChange(v: String) = _state.update { it.copy(email = v, emailError = null) }
 
-    fun onPasswordChange(v: String) = _state.update { it.copy(password = v, passwordResult = SectionState.Idle) }
+    fun onPasswordChange(v: String) = _state.update {
+        it.copy(password = v, pwnedResult = SectionState.Idle, xonPasswordResult = SectionState.Idle)
+    }
 
+    fun setUseXonForPassword(v: Boolean) = _state.update { it.copy(useXonForPassword = v) }
+
+    /** Consulta todas las fuentes gratuitas a la vez (y HIBP si hay API key). */
     fun checkEmail() {
         val email = _state.value.email.trim()
         if (!EmailValidator.isValid(email)) {
             _state.update { it.copy(emailError = "Email no válido") }
             return
         }
+        val providers = buildList {
+            add(LeakProvider.XON)
+            add(LeakProvider.LEAKCHECK)
+            add(LeakProvider.HUDSONROCK)
+            if (repo.hasHibpKey()) add(LeakProvider.HIBP)
+        }
         job?.cancel()
-        _state.update { it.copy(breaches = SectionState.Loading) }
+        _state.update { s -> s.copy(checkedEmail = email, providers = providers.associateWith { SectionState.Loading }) }
         job = viewModelScope.launch {
-            val r = safeCall { repo.breaches(email) }
-            _state.update { s ->
-                s.copy(breaches = r.fold({ SectionState.Success(it) }, { SectionState.Error(it.toUserMessage()) }))
+            coroutineScope {
+                providers.forEach { p ->
+                    launch {
+                        val r = safeCall { repo.lookup(p, email) }
+                        val section: SectionState<ProviderResult> =
+                            r.fold({ SectionState.Success(it) }, { SectionState.Error(it.toUserMessage()) })
+                        _state.update { s -> s.copy(providers = s.providers + (p to section)) }
+                    }
+                }
             }
-            r.getOrNull()?.let { list ->
-                history.record(
-                    HistoryModule.BREACH, email,
-                    if (list.isEmpty()) "Sin brechas conocidas" else "${list.size} brechas",
-                    list.joinToString("\n") { "${it.title} (${it.breachDate}): ${it.dataClasses.joinToString(", ")}" },
-                )
-            }
+            recordEmailHistory(email)
         }
     }
 
     fun cancel() {
         job?.cancel()
-        _state.update { if (it.breaches is SectionState.Loading) it.copy(breaches = SectionState.Idle) else it }
+        _state.update { s -> s.copy(providers = s.providers.filterValues { it !is SectionState.Loading }) }
     }
 
-    /** La contraseña no se guarda en historial ni sale del móvil (solo 5 caracteres de su SHA-1). */
+    private suspend fun recordEmailHistory(email: String) {
+        val results = _state.value.providers.mapNotNull { (p, st) -> (st as? SectionState.Success)?.data?.let { p to it } }
+        if (results.isEmpty()) return
+        val hits = results.filter { it.second.found }
+        history.record(
+            HistoryModule.BREACH, email,
+            if (hits.isEmpty()) "Sin filtraciones en ${results.size} fuentes"
+            else "Aparece en " + hits.joinToString(", ") { it.first.title },
+            results.joinToString("\n\n") { (p, r) ->
+                buildString {
+                    append("[${p.title}] ${r.summary}")
+                    r.items.forEach { item ->
+                        append("\n- ${item.name}")
+                        item.fields.forEach { f -> append(" | ${f.key}: ${f.value}") }
+                    }
+                }
+            },
+        )
+    }
+
+    /** La contraseña no se guarda en historial ni sale del móvil: solo un prefijo de su hash. */
     fun checkPassword() {
         val pw = _state.value.password
         if (pw.isEmpty()) return
-        _state.update { it.copy(passwordResult = SectionState.Loading) }
+        val useXon = _state.value.useXonForPassword
+        _state.update {
+            it.copy(
+                password = "",
+                pwnedResult = SectionState.Loading,
+                xonPasswordResult = if (useXon) SectionState.Loading else SectionState.Idle,
+            )
+        }
         viewModelScope.launch {
-            val r = safeCall { repo.passwordCount(pw) }
-            _state.update { s ->
-                s.copy(
-                    password = "",
-                    passwordResult = r.fold({ SectionState.Success(it) }, { SectionState.Error(it.toUserMessage()) }),
-                )
+            val r = safeCall { repo.passwordCount(pw).toLong() }
+            _state.update { it.copy(pwnedResult = r.fold({ c -> SectionState.Success(c) }, { e -> SectionState.Error(e.toUserMessage()) })) }
+        }
+        if (useXon) {
+            viewModelScope.launch {
+                val r = safeCall { repo.passwordCountXon(pw) }
+                _state.update { it.copy(xonPasswordResult = r.fold({ c -> SectionState.Success(c) }, { e -> SectionState.Error(e.toUserMessage()) })) }
             }
         }
     }
