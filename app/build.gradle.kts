@@ -96,5 +96,9 @@ dependencies {
     implementation(libs.androidx.exifinterface)
     implementation(libs.androidx.security.crypto)
 
+    implementation(libs.libphonenumber)
+    implementation(libs.libphonenumber.geocoder)
+    implementation(libs.libphonenumber.carrier)
+
     testImplementation(libs.junit)
 }

@@ -22,4 +22,6 @@ object HistoryModule {
     const val EXIF = "EXIF"
     const val BREACH = "Brechas"
     const val HASH = "Hash"
+    const val PHONE = "Teléfono"
+    const val EMAIL = "Email"
 }

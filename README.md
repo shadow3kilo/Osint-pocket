@@ -50,6 +50,9 @@ Abre la carpeta del proyecto. Android Studio genera el wrapper y descarga el SDK
 | Contraseñas | Pwned Passwords (SHA-1, envía 5 hex, `Add-Padding`) | No | Sin límite práctico |
 | Contraseñas (opcional) | XposedOrNot `pass/anon` (Keccak-512 original, envía 10 hex) | No | Menos anónimo: desactivado por defecto |
 | Hash | Local (MD5/SHA-1/SHA-256) + enlace a VirusTotal | No | El archivo nunca se sube |
+| Teléfono | libphonenumber de Google (offline) | No | Sin conexión; operador = asignación original del rango |
+| Google dorks | Construcción de consultas (Google, Bing, DuckDuckGo, Startpage) | No | Solo genera URLs de búsqueda |
+| Email / Gravatar | Perfil público de Gravatar (MD5 del email) | No | Solo datos que el usuario hizo públicos |
 
 Todas las peticiones llevan el User-Agent `OSINTPocket/<versión> (Android <v>; passive-recon)` y
 reintentos con backoff exponencial ante 429/5xx (respetando `Retry-After`).

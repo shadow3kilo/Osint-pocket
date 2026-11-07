@@ -21,7 +21,10 @@ import androidx.compose.material.icons.automirrored.outlined.OpenInNew
 import androidx.compose.material.icons.outlined.DeleteOutline
 import androidx.compose.material.icons.outlined.Fingerprint
 import androidx.compose.material.icons.outlined.History
+import androidx.compose.material.icons.outlined.AlternateEmail
 import androidx.compose.material.icons.outlined.Key
+import androidx.compose.material.icons.outlined.Phone
+import androidx.compose.material.icons.outlined.TravelExplore
 import androidx.compose.material.icons.outlined.MenuBook
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.UploadFile
@@ -87,6 +90,9 @@ internal val RED = Color(0xFFF85149)
 enum class MoreDest(val route: String, val title: String, val subtitle: String, val icon: ImageVector) {
     BREACH("more/breach", "Brechas", "Email y contraseñas en fuentes gratuitas de filtraciones", Icons.Outlined.WarningAmber),
     CATALOG("more/catalog", "Catálogo HIBP", "Todas las brechas públicas y si te afectan tus servicios (gratis)", Icons.Outlined.MenuBook),
+    EMAIL("more/email", "Email / Gravatar", "Perfil público vinculado a un correo (gratis)", Icons.Outlined.AlternateEmail),
+    PHONE("more/phone", "Teléfono", "País, tipo, operador y zona de un número (sin conexión)", Icons.Outlined.Phone),
+    DORKS("more/dorks", "Google dorks", "Consultas de buscador para recon pasivo", Icons.Outlined.TravelExplore),
     HASH("more/hash", "Hash de archivo", "MD5 / SHA-1 / SHA-256 y búsqueda en VirusTotal", Icons.Outlined.Fingerprint),
     HISTORY("more/history", "Historial", "Búsquedas guardadas y exportación JSON/Markdown", Icons.Outlined.History),
     SETTINGS("more/settings", "Ajustes", "Tor (anonimato), API key de HIBP e historial", Icons.Outlined.Settings),

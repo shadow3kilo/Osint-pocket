@@ -16,6 +16,9 @@ coroutines = "1.9.0"
 room = "2.6.1"
 exifinterface = "1.3.7"
 securityCrypto = "1.1.0-alpha06"
+libphonenumber = "9.0.0"
+libphonenumberGeocoder = "3.43"
+libphonenumberCarrier = "2.36"
 junit = "4.13.2"
 
 [libraries]
@@ -44,6 +47,9 @@ room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "room" }
 room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
 androidx-exifinterface = { group = "androidx.exifinterface", name = "exifinterface", version.ref = "exifinterface" }
 androidx-security-crypto = { group = "androidx.security", name = "security-crypto", version.ref = "securityCrypto" }
+libphonenumber = { group = "com.googlecode.libphonenumber", name = "libphonenumber", version.ref = "libphonenumber" }
+libphonenumber-geocoder = { group = "com.googlecode.libphonenumber", name = "geocoder", version.ref = "libphonenumberGeocoder" }
+libphonenumber-carrier = { group = "com.googlecode.libphonenumber", name = "carrier", version.ref = "libphonenumberCarrier" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 
 [plugins]
