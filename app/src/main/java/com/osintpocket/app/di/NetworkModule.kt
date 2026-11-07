@@ -1,13 +1,15 @@
 package com.osintpocket.app.di
 
-import android.os.Build
 import com.osintpocket.app.BuildConfig
 import com.osintpocket.app.core.network.HostRateLimitInterceptor
+import com.osintpocket.app.core.AppPrefs
 import com.osintpocket.app.core.network.RetryInterceptor
+import com.osintpocket.app.core.network.TorProxySelector
 import com.osintpocket.app.core.network.UserAgentInterceptor
 import com.osintpocket.app.data.remote.CrtShApi
 import com.osintpocket.app.data.remote.DohApi
 import com.osintpocket.app.data.remote.HibpApi
+import com.osintpocket.app.data.remote.HibpCatalogApi
 import com.osintpocket.app.data.remote.HudsonRockApi
 import com.osintpocket.app.data.remote.LeakCheckApi
 import com.osintpocket.app.data.remote.XonApi
@@ -34,6 +36,9 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 object NetworkModule {
 
+    /** Igual para todos los usuarios (sin versión de Android): identifica la app, no al dispositivo. */
+    private val USER_AGENT = "OSINTPocket/${BuildConfig.VERSION_NAME} (passive-recon)"
+
     /** Intervalo mínimo entre peticiones por host (ms). ip-api gratis: 45 req/min. */
     private val HOST_INTERVALS = mapOf(
         "ip-api.com" to 1_400L,
@@ -58,13 +63,13 @@ object NetworkModule {
 
     @Provides
     @Singleton
-    fun provideOkHttp(): OkHttpClient {
-        val ua = "OSINTPocket/${BuildConfig.VERSION_NAME} (Android ${Build.VERSION.RELEASE}; passive-recon)"
+    fun provideOkHttp(prefs: AppPrefs): OkHttpClient {
         return OkHttpClient.Builder()
-            .connectTimeout(15, TimeUnit.SECONDS)
+            .proxySelector(TorProxySelector(prefs))
+            .connectTimeout(30, TimeUnit.SECONDS) // los circuitos de Tor tardan más en abrirse
             .readTimeout(60, TimeUnit.SECONDS) // crt.sh puede tardar con dominios grandes
             .callTimeout(150, TimeUnit.SECONDS)
-            .addInterceptor(UserAgentInterceptor(ua))
+            .addInterceptor(UserAgentInterceptor(USER_AGENT))
             .addInterceptor(RetryInterceptor())
             .addInterceptor(HostRateLimitInterceptor(HOST_INTERVALS, defaultIntervalMs = 250))
             .apply {
@@ -80,15 +85,15 @@ object NetworkModule {
     @Provides
     @Singleton
     @WebClient
-    fun provideWebClient(): OkHttpClient {
-        val ua = "OSINTPocket/${BuildConfig.VERSION_NAME} (Android ${Build.VERSION.RELEASE}; passive-recon)"
+    fun provideWebClient(prefs: AppPrefs): OkHttpClient {
         return OkHttpClient.Builder()
-            .connectTimeout(15, TimeUnit.SECONDS)
+            .proxySelector(TorProxySelector(prefs))
+            .connectTimeout(30, TimeUnit.SECONDS)
             .readTimeout(20, TimeUnit.SECONDS)
             .callTimeout(40, TimeUnit.SECONDS)
             .followRedirects(true)
             .followSslRedirects(true)
-            .addInterceptor(UserAgentInterceptor(ua))
+            .addInterceptor(UserAgentInterceptor(USER_AGENT))
             .addInterceptor(HostRateLimitInterceptor(emptyMap(), defaultIntervalMs = 500))
             .build()
     }
@@ -115,6 +120,10 @@ object NetworkModule {
 
     @Provides @Singleton
     fun provideHibp(c: OkHttpClient, j: Json): HibpApi =
+        retrofit("https://haveibeenpwned.com/api/v3/", c, j).create()
+
+    @Provides @Singleton
+    fun provideHibpCatalog(c: OkHttpClient, j: Json): HibpCatalogApi =
         retrofit("https://haveibeenpwned.com/api/v3/", c, j).create()
 
     @Provides @Singleton

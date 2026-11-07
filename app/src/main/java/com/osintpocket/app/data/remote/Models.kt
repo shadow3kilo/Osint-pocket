@@ -46,6 +46,11 @@ data class HibpBreach(
     @SerialName("IsVerified") val isVerified: Boolean = true,
     @SerialName("IsSensitive") val isSensitive: Boolean = false,
     @SerialName("IsSpamList") val isSpamList: Boolean = false,
+    @SerialName("AddedDate") val addedDate: String = "",
+    @SerialName("IsFabricated") val isFabricated: Boolean = false,
+    @SerialName("IsRetired") val isRetired: Boolean = false,
+    @SerialName("IsMalware") val isMalware: Boolean = false,
+    @SerialName("IsStealerLog") val isStealerLog: Boolean = false,
 )
 
 @Serializable

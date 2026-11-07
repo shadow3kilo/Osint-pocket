@@ -45,6 +45,7 @@ Abre la carpeta del proyecto. Android Studio genera el wrapper y descarga el SDK
 | Brechas (email) | XposedOrNot `breach-analytics` | No | 2/s, 25/hora, 100/día por IP; uso personal |
 | Brechas (email) | LeakCheck API pública | No | Solo nombres de fuentes y tipos de datos, nunca valores |
 | Infostealers (email) | Hudson Rock Cavalier OSINT | No | ~1/s; contraseñas enmascaradas |
+| Catálogo de brechas | HIBP `GET /breaches` (gratis, sin key; caché local de 24 h) | No | Atribución CC BY 4.0 obligatoria (visible en la pantalla) |
 | Brechas (email, opcional) | Have I Been Pwned v3 | **Sí, de pago** | Plan básico: 10 peticiones/min; la app espacia a 6,5 s |
 | Contraseñas | Pwned Passwords (SHA-1, envía 5 hex, `Add-Padding`) | No | Sin límite práctico |
 | Contraseñas (opcional) | XposedOrNot `pass/anon` (Keccak-512 original, envía 10 hex) | No | Menos anónimo: desactivado por defecto |
@@ -56,6 +57,17 @@ reintentos con backoff exponencial ante 429/5xx (respetando `Retry-After`).
 La API key de HIBP se guarda con `EncryptedSharedPreferences` (clave del Android Keystore).
 El historial vive solo en el móvil (Room), se puede desactivar en Ajustes y nunca guarda
 contraseñas ni coordenadas GPS.
+
+## Tor (anonimato)
+
+**Más → Ajustes → Anonimato con Tor**: con [Orbot](https://play.google.com/store/apps/details?id=org.torproject.android)
+en marcha, todas las peticiones de la app salen por su proxy SOCKS (`127.0.0.1:9050`), DNS incluido.
+
+- **Fail-closed:** si Orbot no responde, las consultas fallan; nunca salen por conexión directa.
+- Al activarlo o desactivarlo se cierran las conexiones abiertas, así que ninguna se reutiliza por la ruta anterior.
+- El botón **Comprobar** verifica la salida con `check.torproject.org` y muestra la IP de salida.
+- **Límites:** el servicio consultado sigue viendo lo que buscas, algunos bloquean Tor (403), y
+  `ip-api.com` va sin cifrar. Ninguna herramienta garantiza anonimato total.
 
 ## Añadir o corregir sitios del módulo Alias
 

@@ -22,6 +22,7 @@ import androidx.compose.material.icons.outlined.DeleteOutline
 import androidx.compose.material.icons.outlined.Fingerprint
 import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.Key
+import androidx.compose.material.icons.outlined.MenuBook
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.UploadFile
 import androidx.compose.material.icons.outlined.Visibility
@@ -85,9 +86,10 @@ private val RED = Color(0xFFF85149)
 
 enum class MoreDest(val route: String, val title: String, val subtitle: String, val icon: ImageVector) {
     BREACH("more/breach", "Brechas", "Email y contraseñas en fuentes gratuitas de filtraciones", Icons.Outlined.WarningAmber),
+    CATALOG("more/catalog", "Catálogo HIBP", "Todas las brechas públicas y si te afectan tus servicios (gratis)", Icons.Outlined.MenuBook),
     HASH("more/hash", "Hash de archivo", "MD5 / SHA-1 / SHA-256 y búsqueda en VirusTotal", Icons.Outlined.Fingerprint),
     HISTORY("more/history", "Historial", "Búsquedas guardadas y exportación JSON/Markdown", Icons.Outlined.History),
-    SETTINGS("more/settings", "Ajustes", "API key de HIBP e historial", Icons.Outlined.Settings),
+    SETTINGS("more/settings", "Ajustes", "Tor (anonimato), API key de HIBP e historial", Icons.Outlined.Settings),
 }
 
 @Composable
@@ -435,6 +437,7 @@ fun SettingsScreen(vm: SettingsViewModel = hiltViewModel()) {
     }
 
     LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        item { TorCard(state, vm::setTorEnabled, vm::checkTor, onOpen = { runCatching { uriHandler.openUri(it) } }) }
         item {
             InfoCard("API key de Have I Been Pwned", selectable = false) {
                 if (!state.keystoreAvailable) {
@@ -490,5 +493,61 @@ fun SettingsScreen(vm: SettingsViewModel = hiltViewModel()) {
                 ))
             }
         }
+    }
+}
+
+// ───────────────────────── Tor ─────────────────────────
+
+@Composable
+private fun TorCard(
+    state: SettingsUiState,
+    onToggle: (Boolean) -> Unit,
+    onCheck: () -> Unit,
+    onOpen: (String) -> Unit,
+) {
+    InfoCard("Anonimato con Tor (Orbot)", subtitle = "Todas las consultas de la app salen por la red Tor", selectable = false) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text("Usar Tor", style = MaterialTheme.typography.bodyLarge)
+                Text(
+                    "Si Orbot no está activo, las consultas fallan en vez de salir con tu IP real.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Switch(checked = state.torEnabled, onCheckedChange = onToggle)
+        }
+        when (val st = state.torStatus) {
+            SectionState.Idle -> Unit
+            SectionState.Loading -> LoadingRow("Comprobando Tor…")
+            is SectionState.Error -> ErrorRow(st.message)
+            is SectionState.Success -> {
+                val s = st.data
+                val (text, color) = when {
+                    !s.orbotRunning && state.torEnabled ->
+                        "Orbot no está en marcha: las consultas fallarán hasta que lo abras." to RED
+                    !s.orbotRunning -> "Orbot no está en marcha o no está instalado." to MaterialTheme.colorScheme.onSurfaceVariant
+                    !state.torEnabled -> "Orbot está listo. Activa el interruptor para usarlo." to MaterialTheme.colorScheme.onSurfaceVariant
+                    s.isTor == true -> "Conectado por Tor · IP de salida ${s.exitIp.orEmpty()}" to GREEN
+                    s.isTor == false -> "¡Atención! El tráfico NO está saliendo por Tor." to RED
+                    else -> "No se pudo confirmar la conexión: ${s.error.orEmpty()}" to RED
+                }
+                Text(text, color = color, style = MaterialTheme.typography.bodyMedium)
+            }
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedButton(onClick = onCheck) { Text("Comprobar") }
+            TextButton(onClick = { onOpen("https://play.google.com/store/apps/details?id=org.torproject.android") }) {
+                Text("Instalar Orbot")
+            }
+        }
+        Text(
+            "Qué protege: los servicios consultados ven una IP de Tor, no la tuya, y tu operador no ve a quién consultas. " +
+                "Qué no protege: el servicio sigue viendo lo que buscas (el email o el dominio), y algunos servicios " +
+                "bloquean Tor y aparecerán como «Incierto» o con error 403. Las búsquedas en ip-api.com van sin cifrar " +
+                "y el nodo de salida puede verlas. Ninguna herramienta garantiza anonimato total.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }

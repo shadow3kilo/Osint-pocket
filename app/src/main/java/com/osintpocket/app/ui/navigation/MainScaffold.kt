@@ -19,6 +19,11 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
+import androidx.compose.material.icons.outlined.Shield
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlinx.coroutines.flow.StateFlow
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -31,6 +36,7 @@ import com.osintpocket.app.ui.alias.AliasScreen
 import com.osintpocket.app.ui.domain.DomainScreen
 import com.osintpocket.app.ui.exif.ExifScreen
 import com.osintpocket.app.ui.more.BreachScreen
+import com.osintpocket.app.ui.more.CatalogScreen
 import com.osintpocket.app.ui.more.HashScreen
 import com.osintpocket.app.ui.more.HistoryScreen
 import com.osintpocket.app.ui.more.MoreDest
@@ -50,7 +56,8 @@ private const val MORE_HOME = "more/home"
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainScaffold() {
+fun MainScaffold(torEnabled: StateFlow<Boolean>) {
+    val tor by torEnabled.collectAsStateWithLifecycle()
     val nav = rememberNavController()
     val backStack by nav.currentBackStackEntryAsState()
     val destination = backStack?.destination
@@ -62,6 +69,12 @@ fun MainScaffold() {
         topBar = {
             CenterAlignedTopAppBar(
                 title = { Text(sub?.title ?: currentTab.title) },
+                actions = {
+                    if (tor) {
+                        Icon(Icons.Outlined.Shield, "Tor activado", tint = Color(0xFF7E4798), modifier = Modifier.padding(end = 4.dp))
+                        Text("Tor", color = Color(0xFF7E4798), modifier = Modifier.padding(end = 12.dp))
+                    }
+                },
                 navigationIcon = {
                     if (sub != null) {
                         IconButton(onClick = { nav.popBackStack() }) {
@@ -100,6 +113,7 @@ fun MainScaffold() {
                 composable(MoreDest.BREACH.route) {
                     BreachScreen(onOpenSettings = { nav.navigate(MoreDest.SETTINGS.route) })
                 }
+                composable(MoreDest.CATALOG.route) { CatalogScreen() }
                 composable(MoreDest.HASH.route) { HashScreen() }
                 composable(MoreDest.HISTORY.route) { HistoryScreen() }
                 composable(MoreDest.SETTINGS.route) { SettingsScreen() }

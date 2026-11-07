@@ -5,6 +5,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.osintpocket.app.core.AppPrefs
 import com.osintpocket.app.core.SecretStore
+import com.osintpocket.app.core.network.TorManager
+import com.osintpocket.app.core.network.TorStatus
 import com.osintpocket.app.core.network.safeCall
 import com.osintpocket.app.core.network.toUserMessage
 import com.osintpocket.app.core.ui.SectionState
@@ -227,6 +229,8 @@ class HistoryViewModel @Inject constructor(
 // ───────────────────────── Ajustes ─────────────────────────
 
 data class SettingsUiState(
+    val torEnabled: Boolean = false,
+    val torStatus: SectionState<TorStatus> = SectionState.Idle,
     val keyInput: String = "",
     val savedKeyHint: String? = null,
     val keystoreAvailable: Boolean = true,
@@ -239,12 +243,32 @@ class SettingsViewModel @Inject constructor(
     private val secrets: SecretStore,
     private val prefs: AppPrefs,
     private val history: HistoryRepository,
+    private val tor: TorManager,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(load())
     val state: StateFlow<SettingsUiState> = _state.asStateFlow()
 
+    init {
+        checkTor()
+    }
+
+    fun setTorEnabled(v: Boolean) {
+        tor.setEnabled(v)
+        _state.update { it.copy(torEnabled = v) }
+        checkTor()
+    }
+
+    fun checkTor() {
+        _state.update { it.copy(torStatus = SectionState.Loading) }
+        viewModelScope.launch {
+            val r = safeCall { tor.check() }
+            _state.update { it.copy(torStatus = r.fold({ s -> SectionState.Success(s) }, { e -> SectionState.Error(e.toUserMessage()) })) }
+        }
+    }
+
     private fun load() = SettingsUiState(
+        torEnabled = prefs.torEnabled,
         savedKeyHint = secrets.hibpKey?.let { "…" + it.takeLast(4) },
         keystoreAvailable = secrets.isAvailable,
         historyEnabled = prefs.historyEnabled,
@@ -256,12 +280,12 @@ class SettingsViewModel @Inject constructor(
         val k = _state.value.keyInput.trim()
         if (k.isEmpty()) return
         secrets.hibpKey = k
-        _state.value = load().copy(message = if (secrets.hibpKey != null) "API key guardada (cifrada)" else "No se pudo guardar la clave")
+        _state.update { load().copy(torStatus = it.torStatus, message = if (secrets.hibpKey != null) "API key guardada (cifrada)" else "No se pudo guardar la clave") }
     }
 
     fun deleteKey() {
         secrets.hibpKey = null
-        _state.value = load().copy(message = "API key eliminada")
+        _state.update { load().copy(torStatus = it.torStatus, message = "API key eliminada") }
     }
 
     fun setHistoryEnabled(v: Boolean) {

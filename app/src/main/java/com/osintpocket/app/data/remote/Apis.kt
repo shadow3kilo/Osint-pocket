@@ -50,6 +50,15 @@ interface HibpApi {
     ): Response<List<HibpBreach>>
 }
 
+/**
+ * Catálogo de brechas de HIBP: GRATIS y sin API key. Licencia CC BY 4.0: hay que atribuir
+ * a Have I Been Pwned con un enlace visible. Exige User-Agent (lo pone UserAgentInterceptor).
+ */
+interface HibpCatalogApi {
+    @GET("breaches")
+    suspend fun breaches(): List<HibpBreach>
+}
+
 /** Pwned Passwords (gratis, sin key). Add-Padding evita que el tamaño de la respuesta revele el prefijo. */
 interface PwnedPasswordsApi {
     @Headers("Add-Padding: true")

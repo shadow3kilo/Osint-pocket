@@ -27,7 +27,7 @@ class MainActivity : ComponentActivity() {
             OsintTheme {
                 var accepted by rememberSaveable { mutableStateOf(prefs.disclaimerAccepted) }
                 if (accepted) {
-                    MainScaffold()
+                    MainScaffold(torEnabled = prefs.torEnabledFlow)
                 } else {
                     DisclaimerScreen(onAccept = {
                         prefs.disclaimerAccepted = true
