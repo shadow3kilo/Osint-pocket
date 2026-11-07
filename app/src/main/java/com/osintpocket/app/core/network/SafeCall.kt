@@ -23,13 +23,17 @@ fun Throwable.toUserMessage(): String = when (this) {
         in 500..599 -> "El servicio no responde (HTTP ${code()})"
         else -> "Error HTTP ${code()}"
     }
-    is java.net.ConnectException -> "No se pudo conectar (si usas Tor, comprueba que Orbot esté encendido)"
-    is java.net.SocketException ->
-        if (message.orEmpty().contains("SOCKS", ignoreCase = true)) {
-            "Tor no responde o el destino no es accesible por Tor. Comprueba que Orbot esté encendido"
+    // ConnectException es subclase de SocketException: una sola rama cubre ambas.
+    is java.net.SocketException -> {
+        val m = message.orEmpty()
+        val torProxyDown = m.contains("SOCKS", ignoreCase = true) ||
+            m.contains("127.0.0.1") || m.contains("ECONNREFUSED", ignoreCase = true)
+        if (torProxyDown) {
+            "Tor está activado pero Orbot no responde. Abre Orbot y pulsa «Iniciar», o desactiva Tor en Ajustes."
         } else {
-            message ?: "Error de conexión"
+            "No se pudo conectar: ${m.ifEmpty { "sin conexión" }}"
         }
+    }
     is SocketTimeoutException -> "Tiempo de espera agotado"
     is UnknownHostException -> "Sin conexión o host no resoluble"
     is SSLException -> "Error TLS: ${message.orEmpty()}"
