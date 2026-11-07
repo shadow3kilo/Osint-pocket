@@ -79,8 +79,8 @@ import com.osintpocket.app.ui.common.MonoText
 import com.osintpocket.app.ui.common.QueryField
 import java.text.NumberFormat
 
-private val GREEN = Color(0xFF3FB950)
-private val RED = Color(0xFFF85149)
+internal val GREEN = Color(0xFF3FB950)
+internal val RED = Color(0xFFF85149)
 
 // ───────────────────────── Menú "Más" ─────────────────────────
 
