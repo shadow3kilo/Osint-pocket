@@ -66,14 +66,13 @@ class PhoneRepository @Inject constructor() {
 
         val valid = util.isValidNumber(number)
         val region = util.getRegionCodeForNumber(number)
-        val fmt = PhoneNumberUtil.PhoneNumberFormat
         return PhoneInfo(
             valid = valid,
             possible = util.isPossibleNumber(number),
-            e164 = util.format(number, fmt.E164),
-            international = util.format(number, fmt.INTERNATIONAL),
-            national = util.format(number, fmt.NATIONAL),
-            rfc3966 = util.format(number, fmt.RFC3966),
+            e164 = util.format(number, PhoneNumberUtil.PhoneNumberFormat.E164),
+            international = util.format(number, PhoneNumberUtil.PhoneNumberFormat.INTERNATIONAL),
+            national = util.format(number, PhoneNumberUtil.PhoneNumberFormat.NATIONAL),
+            rfc3966 = util.format(number, PhoneNumberUtil.PhoneNumberFormat.RFC3966),
             countryCode = number.countryCode,
             regionCode = region,
             country = region?.let { Locale("", it).getDisplayCountry(spanish) },
