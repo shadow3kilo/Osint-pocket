@@ -15,9 +15,22 @@ android {
         applicationId = "com.osintpocket.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "0.1.0"
+        // En GitHub Actions cada compilación sube la versión, así Android la acepta como actualización.
+        val build = System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull() ?: 1
+        versionCode = build
+        versionName = "0.2.$build"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    // Clave de depuración fija en el repo: todas las compilaciones se firman igual y se
+    // pueden instalar una encima de otra. No usar para publicar (para eso, una clave release propia).
+    signingConfigs {
+        getByName("debug") {
+            storeFile = file("debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
     }
 
     buildTypes {
