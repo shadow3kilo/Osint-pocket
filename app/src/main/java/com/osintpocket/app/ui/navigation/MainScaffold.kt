@@ -40,6 +40,7 @@ import com.osintpocket.app.ui.more.CatalogScreen
 import com.osintpocket.app.ui.more.DorksScreen
 import com.osintpocket.app.ui.more.EmailReconScreen
 import com.osintpocket.app.ui.more.PhoneScreen
+import com.osintpocket.app.ui.more.ProfileScreen
 import com.osintpocket.app.ui.more.HashScreen
 import com.osintpocket.app.ui.more.HistoryScreen
 import com.osintpocket.app.ui.more.MoreDest
@@ -117,6 +118,7 @@ fun MainScaffold(torEnabled: StateFlow<Boolean>) {
                     BreachScreen(onOpenSettings = { nav.navigate(MoreDest.SETTINGS.route) })
                 }
                 composable(MoreDest.CATALOG.route) { CatalogScreen() }
+                composable(MoreDest.PROFILE.route) { ProfileScreen() }
                 composable(MoreDest.EMAIL.route) { EmailReconScreen() }
                 composable(MoreDest.PHONE.route) { PhoneScreen() }
                 composable(MoreDest.DORKS.route) { DorksScreen() }

@@ -257,3 +257,106 @@ private fun GravatarCard(g: GravatarResult, onOpen: (String) -> Unit) {
         AssistChip(onClick = { onOpen(g.profileUrl) }, label = { Text("Ver perfil en Gravatar") })
     }
 }
+
+// ───────────────────────── Ficha de email (agregada) ─────────────────────────
+
+@Composable
+fun ProfileScreen(vm: ProfileViewModel = hiltViewModel()) {
+    val state by vm.state.collectAsStateWithLifecycle()
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val clipboard = androidx.compose.ui.platform.LocalClipboardManager.current
+
+    LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        item {
+            QueryField(
+                value = state.email,
+                onValueChange = vm::onEmail,
+                label = "Email a investigar",
+                placeholder = "tu@correo.com",
+                error = state.inputError,
+                busy = state.running,
+                onSubmit = vm::investigate,
+                onCancel = vm::cancel,
+                hint = "Reúne todas las fuentes gratuitas en una ficha",
+                keyboardType = KeyboardType.Email,
+            )
+        }
+
+        state.checkedEmail?.let {
+            val grav = (state.gravatar as? SectionState.Success)?.data
+            val results = state.providers.values.mapNotNull { r -> (r as? SectionState.Success)?.data }
+            item {
+                val hits = com.osintpocket.app.domain.profile.ProfileReport.hitCount(grav, results)
+                InfoCard("Ficha de $it", selectable = false) {
+                    Text(
+                        com.osintpocket.app.domain.profile.ProfileReport.summary(grav, results),
+                        style = MaterialTheme.typography.titleMedium,
+                        color = if (hits == 0) GREEN else RED,
+                    )
+                    if (state.running) LoadingRow("Consultando fuentes…")
+                    state.report?.let { report ->
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            OutlinedButton(onClick = {
+                                clipboard.setText(androidx.compose.ui.text.AnnotatedString(report))
+                            }) { Text("Copiar informe") }
+                            Button(onClick = {
+                                val send = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                                    type = "text/plain"
+                                    putExtra(android.content.Intent.EXTRA_SUBJECT, "Ficha OSINT de $it")
+                                    putExtra(android.content.Intent.EXTRA_TEXT, report)
+                                }
+                                context.startActivity(android.content.Intent.createChooser(send, "Compartir ficha"))
+                            }) { Text("Compartir") }
+                        }
+                    }
+                }
+            }
+
+            item { EmailSection("Gravatar", state.gravatar) { g -> GravatarInline(g) } }
+            com.osintpocket.app.data.LeakProvider.entries
+                .filter { p -> p in state.providers }
+                .forEach { p ->
+                    item(key = p.name) {
+                        EmailSection(p.title, state.providers.getValue(p)) { r -> ProviderInline(r) }
+                    }
+                }
+        }
+    }
+}
+
+@Composable
+private fun <T> EmailSection(
+    title: String,
+    state: SectionState<T>,
+    body: @Composable (T) -> Unit,
+) {
+    InfoCard(title, selectable = state is SectionState.Success) {
+        when (state) {
+            SectionState.Idle -> Unit
+            SectionState.Loading -> LoadingRow()
+            is SectionState.Error -> ErrorRow(state.message)
+            is SectionState.Success -> body(state.data)
+        }
+    }
+}
+
+@Composable
+private fun GravatarInline(g: com.osintpocket.app.data.GravatarResult) {
+    val hasProfile = g.fields.isNotEmpty() || g.accounts.isNotEmpty()
+    if (!g.hasAvatar && !hasProfile) {
+        Text("Sin perfil público", color = GREEN)
+        return
+    }
+    if (g.hasAvatar) Text("Avatar público: sí", color = RED, style = MaterialTheme.typography.bodyMedium)
+    if (g.fields.isNotEmpty()) KeyValueList(g.fields)
+    if (g.accounts.isNotEmpty()) KeyValueList(g.accounts)
+}
+
+@Composable
+private fun ProviderInline(r: com.osintpocket.app.data.ProviderResult) {
+    Text(r.summary, color = if (r.found) RED else GREEN, style = MaterialTheme.typography.bodyMedium)
+    r.items.forEach { item ->
+        Text(item.name, style = MaterialTheme.typography.titleSmall)
+        if (item.fields.isNotEmpty()) KeyValueList(item.fields)
+    }
+}

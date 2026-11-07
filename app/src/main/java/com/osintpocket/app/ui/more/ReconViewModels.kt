@@ -117,3 +117,86 @@ class EmailReconViewModel @Inject constructor(
         }
     }
 }
+
+// ───────────────────────── Ficha de email (agregada) ─────────────────────────
+
+data class ProfileUiState(
+    val email: String = "",
+    val inputError: String? = null,
+    val running: Boolean = false,
+    val checkedEmail: String? = null,
+    val gravatar: com.osintpocket.app.core.ui.SectionState<com.osintpocket.app.data.GravatarResult> =
+        com.osintpocket.app.core.ui.SectionState.Idle,
+    val providers: Map<com.osintpocket.app.data.LeakProvider, com.osintpocket.app.core.ui.SectionState<com.osintpocket.app.data.ProviderResult>> = emptyMap(),
+    val report: String? = null,
+)
+
+@dagger.hilt.android.lifecycle.HiltViewModel
+class ProfileViewModel @javax.inject.Inject constructor(
+    private val security: com.osintpocket.app.data.SecurityRepository,
+    private val emailRepo: EmailReconRepository,
+    private val history: HistoryRepository,
+) : ViewModel() {
+
+    private val _state = MutableStateFlow(ProfileUiState())
+    val state: StateFlow<ProfileUiState> = _state.asStateFlow()
+
+    private var job: kotlinx.coroutines.Job? = null
+
+    fun onEmail(v: String) = _state.update { it.copy(email = v, inputError = null) }
+
+    fun investigate() {
+        val email = _state.value.email.trim()
+        if (!com.osintpocket.app.domain.security.EmailValidator.isValid(email)) {
+            _state.update { it.copy(inputError = "Email no válido") }
+            return
+        }
+        val providers = buildList {
+            add(com.osintpocket.app.data.LeakProvider.XON)
+            add(com.osintpocket.app.data.LeakProvider.LEAKCHECK)
+            add(com.osintpocket.app.data.LeakProvider.HUDSONROCK)
+            if (security.hasHibpKey()) add(com.osintpocket.app.data.LeakProvider.HIBP)
+        }
+        job?.cancel()
+        _state.update {
+            it.copy(
+                running = true, checkedEmail = email, report = null,
+                gravatar = com.osintpocket.app.core.ui.SectionState.Loading,
+                providers = providers.associateWith { com.osintpocket.app.core.ui.SectionState.Loading },
+            )
+        }
+        job = viewModelScope.launch {
+            kotlinx.coroutines.coroutineScope {
+                launch {
+                    val r = safeCall { emailRepo.gravatar(email) }
+                    _state.update { s -> s.copy(gravatar = r.fold({ com.osintpocket.app.core.ui.SectionState.Success(it) }, { e -> com.osintpocket.app.core.ui.SectionState.Error(e.toUserMessage()) })) }
+                }
+                providers.forEach { p ->
+                    launch {
+                        val r = safeCall { security.lookup(p, email) }
+                        _state.update { s -> s.copy(providers = s.providers + (p to r.fold({ com.osintpocket.app.core.ui.SectionState.Success(it) }, { e -> com.osintpocket.app.core.ui.SectionState.Error(e.toUserMessage()) }))) }
+                    }
+                }
+            }
+            finish(email)
+        }
+    }
+
+    fun cancel() {
+        job?.cancel()
+        _state.update { it.copy(running = false) }
+    }
+
+    private suspend fun finish(email: String) {
+        val s = _state.value
+        val grav = (s.gravatar as? com.osintpocket.app.core.ui.SectionState.Success)?.data
+        val results = s.providers.values.mapNotNull { (it as? com.osintpocket.app.core.ui.SectionState.Success)?.data }
+        val report = com.osintpocket.app.domain.profile.ProfileReport.build(email, grav, results)
+        _state.update { it.copy(running = false, report = report) }
+        history.record(
+            HistoryModule.EMAIL, email,
+            com.osintpocket.app.domain.profile.ProfileReport.summary(grav, results),
+            report,
+        )
+    }
+}
