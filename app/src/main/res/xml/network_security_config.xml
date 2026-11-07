@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  HTTP en claro permitido: el módulo Web debe poder analizar sitios que aún sirven por HTTP
+  (o que redirigen a HTTP), y ip-api.com gratuito solo funciona por HTTP.
+  Todas las APIs fijas de la app (RDAP, DoH, crt.sh, InternetDB, HIBP) usan HTTPS en el código.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true" />
+</network-security-config>

@@ -1,0 +1,55 @@
+name: Compilar APK
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      # El runner de Ubuntu ya trae el Android SDK; se asegura platform 35 y build-tools 35.
+      - name: Componentes del Android SDK
+        run: |
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-35" "build-tools;35.0.0" > /dev/null
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.11.1"
+
+      - name: Tests unitarios
+        run: gradle --no-daemon testDebugUnitTest
+
+      - name: Compilar APK debug
+        run: gradle --no-daemon assembleDebug
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: osint-pocket-debug-apk
+          path: app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+
+      # Además del artefacto, publica la APK como release: enlace de descarga directo y estable.
+      - name: Publicar release con la APK
+        if: github.event_name != 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp app/build/outputs/apk/debug/app-debug.apk osint-pocket-debug.apk
+          gh release create "build-${{ github.run_number }}" osint-pocket-debug.apk \
+            --title "OSINT Pocket · build ${{ github.run_number }}" \
+            --notes "APK debug compilada por GitHub Actions desde ${{ github.sha }}" \
+            --prerelease

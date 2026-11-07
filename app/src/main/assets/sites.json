@@ -1,0 +1,320 @@
+{
+  "version": 1,
+  "_doc": "Campos: name, category, url ({} = alias), probe (URL a consultar si difiere de url), detect: status|text|url, notFoundStatus (por defecto [404,410]), errorText (detect=text), errorUrl (detect=url), regex (alias válidos en el sitio).",
+  "sites": [
+    {
+      "name": "GitHub",
+      "category": "Código",
+      "url": "https://github.com/{}",
+      "regex": "^[A-Za-z0-9](?:[A-Za-z0-9]|-(?=[A-Za-z0-9])){0,38}$"
+    },
+    {
+      "name": "GitLab",
+      "category": "Código",
+      "url": "https://gitlab.com/{}",
+      "probe": "https://gitlab.com/api/v4/users?username={}",
+      "detect": "text",
+      "errorText": "[]"
+    },
+    {
+      "name": "Bitbucket",
+      "category": "Código",
+      "url": "https://bitbucket.org/{}/"
+    },
+    {
+      "name": "Codeberg",
+      "category": "Código",
+      "url": "https://codeberg.org/{}"
+    },
+    {
+      "name": "Gitee",
+      "category": "Código",
+      "url": "https://gitee.com/{}"
+    },
+    {
+      "name": "SourceForge",
+      "category": "Código",
+      "url": "https://sourceforge.net/u/{}/profile"
+    },
+    {
+      "name": "Docker Hub",
+      "category": "Código",
+      "url": "https://hub.docker.com/u/{}",
+      "probe": "https://hub.docker.com/v2/users/{}/",
+      "regex": "^[a-z0-9]{4,30}$"
+    },
+    {
+      "name": "npm",
+      "category": "Código",
+      "url": "https://www.npmjs.com/~{}"
+    },
+    {
+      "name": "PyPI",
+      "category": "Código",
+      "url": "https://pypi.org/user/{}/"
+    },
+    {
+      "name": "Keybase",
+      "category": "Código",
+      "url": "https://keybase.io/{}"
+    },
+    {
+      "name": "Kaggle",
+      "category": "Desarrollo / CTF",
+      "url": "https://www.kaggle.com/{}"
+    },
+    {
+      "name": "Replit",
+      "category": "Desarrollo / CTF",
+      "url": "https://replit.com/@{}"
+    },
+    {
+      "name": "DEV Community",
+      "category": "Desarrollo / CTF",
+      "url": "https://dev.to/{}"
+    },
+    {
+      "name": "Codewars",
+      "category": "Desarrollo / CTF",
+      "url": "https://www.codewars.com/users/{}"
+    },
+    {
+      "name": "Exercism",
+      "category": "Desarrollo / CTF",
+      "url": "https://exercism.org/profiles/{}"
+    },
+    {
+      "name": "TryHackMe",
+      "category": "Desarrollo / CTF",
+      "url": "https://tryhackme.com/p/{}",
+      "probe": "https://tryhackme.com/api/user/exist/{}",
+      "detect": "text",
+      "errorText": "\"success\":false"
+    },
+    {
+      "name": "Pastebin",
+      "category": "Desarrollo / CTF",
+      "url": "https://pastebin.com/u/{}"
+    },
+    {
+      "name": "Hacker News",
+      "category": "Social / Foros",
+      "url": "https://news.ycombinator.com/user?id={}",
+      "detect": "text",
+      "errorText": "No such user."
+    },
+    {
+      "name": "Lobsters",
+      "category": "Social / Foros",
+      "url": "https://lobste.rs/u/{}"
+    },
+    {
+      "name": "Reddit",
+      "category": "Social / Foros",
+      "url": "https://www.reddit.com/user/{}",
+      "probe": "https://www.reddit.com/user/{}/about.json",
+      "regex": "^[A-Za-z0-9_-]{3,20}$"
+    },
+    {
+      "name": "Mastodon (mastodon.social)",
+      "category": "Social / Foros",
+      "url": "https://mastodon.social/@{}"
+    },
+    {
+      "name": "Bluesky (*.bsky.social)",
+      "category": "Social / Foros",
+      "url": "https://bsky.app/profile/{}.bsky.social",
+      "probe": "https://public.api.bsky.app/xrpc/app.bsky.actor.getProfile?actor={}.bsky.social",
+      "notFoundStatus": [
+        400,
+        404
+      ],
+      "regex": "^[A-Za-z0-9-]{1,63}$"
+    },
+    {
+      "name": "Telegram",
+      "category": "Social / Foros",
+      "url": "https://t.me/{}",
+      "detect": "text",
+      "errorText": "<meta name=\"robots\" content=\"noindex, nofollow\">",
+      "regex": "^[A-Za-z][A-Za-z0-9_]{4,31}$"
+    },
+    {
+      "name": "Disqus",
+      "category": "Social / Foros",
+      "url": "https://disqus.com/by/{}/"
+    },
+    {
+      "name": "Tumblr",
+      "category": "Social / Foros",
+      "url": "https://{}.tumblr.com",
+      "regex": "^[A-Za-z0-9-]{1,63}$"
+    },
+    {
+      "name": "Blogger",
+      "category": "Social / Foros",
+      "url": "https://{}.blogspot.com",
+      "regex": "^[A-Za-z0-9-]{1,63}$"
+    },
+    {
+      "name": "WordPress.com",
+      "category": "Social / Foros",
+      "url": "https://{}.wordpress.com",
+      "detect": "url",
+      "errorUrl": "wordpress.com/typo/?subdomain=",
+      "regex": "^[A-Za-z0-9-]{1,63}$"
+    },
+    {
+      "name": "YouTube",
+      "category": "Música / Vídeo",
+      "url": "https://www.youtube.com/@{}"
+    },
+    {
+      "name": "Vimeo",
+      "category": "Música / Vídeo",
+      "url": "https://vimeo.com/{}"
+    },
+    {
+      "name": "SoundCloud",
+      "category": "Música / Vídeo",
+      "url": "https://soundcloud.com/{}"
+    },
+    {
+      "name": "Mixcloud",
+      "category": "Música / Vídeo",
+      "url": "https://www.mixcloud.com/{}/",
+      "probe": "https://api.mixcloud.com/{}/"
+    },
+    {
+      "name": "Bandcamp",
+      "category": "Música / Vídeo",
+      "url": "https://bandcamp.com/{}"
+    },
+    {
+      "name": "Last.fm",
+      "category": "Música / Vídeo",
+      "url": "https://www.last.fm/user/{}"
+    },
+    {
+      "name": "Steam",
+      "category": "Juegos",
+      "url": "https://steamcommunity.com/id/{}",
+      "detect": "text",
+      "errorText": "The specified profile could not be found."
+    },
+    {
+      "name": "Chess.com",
+      "category": "Juegos",
+      "url": "https://www.chess.com/member/{}",
+      "probe": "https://api.chess.com/pub/player/{}"
+    },
+    {
+      "name": "Lichess",
+      "category": "Juegos",
+      "url": "https://lichess.org/@/{}",
+      "probe": "https://lichess.org/api/user/{}",
+      "regex": "^[A-Za-z0-9_-]{2,30}$"
+    },
+    {
+      "name": "Speedrun.com",
+      "category": "Juegos",
+      "url": "https://www.speedrun.com/users/{}",
+      "probe": "https://www.speedrun.com/api/v1/users/{}"
+    },
+    {
+      "name": "itch.io",
+      "category": "Juegos",
+      "url": "https://{}.itch.io",
+      "regex": "^[A-Za-z0-9-]{1,63}$"
+    },
+    {
+      "name": "Minecraft",
+      "category": "Juegos",
+      "url": "https://namemc.com/profile/{}",
+      "probe": "https://api.mojang.com/users/profiles/minecraft/{}",
+      "notFoundStatus": [
+        204,
+        404
+      ],
+      "regex": "^[A-Za-z0-9_]{3,16}$"
+    },
+    {
+      "name": "Flickr",
+      "category": "Arte / Foto",
+      "url": "https://www.flickr.com/people/{}"
+    },
+    {
+      "name": "Dribbble",
+      "category": "Arte / Foto",
+      "url": "https://dribbble.com/{}"
+    },
+    {
+      "name": "DeviantArt",
+      "category": "Arte / Foto",
+      "url": "https://www.deviantart.com/{}"
+    },
+    {
+      "name": "ArtStation",
+      "category": "Arte / Foto",
+      "url": "https://www.artstation.com/{}"
+    },
+    {
+      "name": "Unsplash",
+      "category": "Arte / Foto",
+      "url": "https://unsplash.com/@{}"
+    },
+    {
+      "name": "Patreon",
+      "category": "Creadores",
+      "url": "https://www.patreon.com/{}"
+    },
+    {
+      "name": "Buy Me a Coffee",
+      "category": "Creadores",
+      "url": "https://www.buymeacoffee.com/{}"
+    },
+    {
+      "name": "Linktree",
+      "category": "Creadores",
+      "url": "https://linktr.ee/{}"
+    },
+    {
+      "name": "About.me",
+      "category": "Creadores",
+      "url": "https://about.me/{}"
+    },
+    {
+      "name": "Instructables",
+      "category": "Creadores",
+      "url": "https://www.instructables.com/member/{}/"
+    },
+    {
+      "name": "Wattpad",
+      "category": "Ocio / Lectura",
+      "url": "https://www.wattpad.com/user/{}"
+    },
+    {
+      "name": "Letterboxd",
+      "category": "Ocio / Lectura",
+      "url": "https://letterboxd.com/{}/"
+    },
+    {
+      "name": "Trakt",
+      "category": "Ocio / Lectura",
+      "url": "https://trakt.tv/users/{}"
+    },
+    {
+      "name": "MyAnimeList",
+      "category": "Ocio / Lectura",
+      "url": "https://myanimelist.net/profile/{}"
+    },
+    {
+      "name": "Duolingo",
+      "category": "Ocio / Lectura",
+      "url": "https://www.duolingo.com/profile/{}",
+      "probe": "https://www.duolingo.com/2017-06-30/users?username={}",
+      "detect": "text",
+      "errorText": "\"users\":[]"
+    }
+  ]
+}
